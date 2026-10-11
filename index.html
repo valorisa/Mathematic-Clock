@@ -158,7 +158,7 @@ for(let n=1;n<=12;n++){
 
   // Position géométrique : 12 en haut, puis sens horaire.
   const angle = (n % 12) * Math.PI / 6;
-  const radius = 41 - 6 * Math.abs(Math.sin(angle));
+  const radius = 40 - 5 * Math.abs(Math.sin(angle));
   const verticalOffset = 1.4;
 
   e.style.left = `${50 + radius * Math.sin(angle)}%`;
