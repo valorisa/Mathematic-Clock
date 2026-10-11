@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Horloge mathématique dynamique</title>
+<style>
+  :root { --size: min(82vw, 620px); --ink:#17345c; --accent:#d83b3b; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; min-height:100vh; display:grid; place-items:center;
+    font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+    background:linear-gradient(135deg,#f7fbff,#eef6f4);
+    color:var(--ink);
+  }
+  .app { width:min(1000px,96vw); padding:20px; overflow:hidden; }
+  h1 { margin:0 0 6px; font-size:clamp(1.7rem,4vw,2.5rem); }
+  .sub { margin:0 0 20px; opacity:.75; }
+  .layout { display:flex; gap:28px; align-items:center; justify-content:center; flex-wrap:wrap; }
+  .clock {
+    position:relative; width:min(var(--size), 88vw); height:min(var(--size), 88vw); max-width:620px; max-height:620px;
+    aspect-ratio:1; border-radius:50%;
+    background:#fff; border:6px solid #17345c;
+    box-shadow:0 18px 45px #17345c22, inset 0 0 0 2px #dce8f5;
+  }
+  .tick { position:absolute; inset:3.5%; transform:rotate(calc(var(--i)*6deg)); }
+  .tick::before { content:""; position:absolute; left:50%; top:0; width:2px; height:8px; background:#54708e; transform:translateX(-50%); }
+  .tick.major::before { height:15px; width:4px; background:#17345c; }
+  .label {
+    position:absolute;
+    width:72px;
+    height:30px;
+    margin:-15px -36px;
+    display:grid;
+    place-items:center;
+    text-align:center;
+    font-weight:700;
+    font-size:clamp(.62rem,2.05vw,.95rem);
+    line-height:1.05;
+    white-space:nowrap;
+    letter-spacing:-.02em;
+    z-index:2;
+    text-shadow:0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
+  }
+  @media (max-width:520px) {
+    .label {
+      width:66px;
+      height:28px;
+      margin:-14px -33px;
+      font-size:clamp(.57rem,2.15vw,.82rem);
+    }
+  }
+  .hand { position:absolute; left:50%; bottom:50%; transform-origin:50% 100%; border-radius:8px; z-index:5; }
+  .hour { width:9px; height:25%; background:#17345c; transform:translateX(-50%) rotate(0deg); }
+  .minute { width:6px; height:34%; background:#285987; transform:translateX(-50%) rotate(0deg); }
+  .second { width:3px; height:39%; background:var(--accent); transform:translateX(-50%) rotate(0deg); }
+  .pin { position:absolute; z-index:10; width:20px; height:20px; left:50%; top:50%;
+         transform:translate(-50%,-50%); border-radius:50%; background:#17345c; border:4px solid #fff; }
+  .panel {
+    width:min(330px,90vw); padding:22px; background:#fff; border-radius:20px;
+    box-shadow:0 12px 30px #17345c18;
+  }
+  .digital { font:700 clamp(1.8rem,5vw,2.6rem) ui-monospace,monospace; margin:10px 0 18px; }
+  .math { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .math div { padding:10px; background:#f1f7fc; border-radius:10px; }
+  .math b { display:block; font-size:1.15rem; }
+  .math span { opacity:.65; font-size:.85rem; }
+  button { margin-top:18px; width:100%; padding:11px; border:0; border-radius:10px;
+           background:#17345c; color:white; font-weight:700; cursor:pointer; }
+</style>
+</head>
+<body>
+<main class="app">
+  <h1>Horloge mathématique dynamique</h1>
+  <p class="sub">Les aiguilles des secondes, minutes et heures avancent en temps réel.</p>
+  <section class="layout">
+    <div class="clock" id="clock">
+      <div id="ticks"></div>
+      <div id="labels"></div>
+      <div class="hand hour" id="hour"></div>
+      <div class="hand minute" id="minute"></div>
+      <div class="hand second" id="second"></div>
+      <div class="pin"></div>
+    </div>
+    <aside class="panel">
+      <div>Heure actuelle</div>
+      <div class="digital" id="digital">00:00:00</div>
+      <div class="math" id="math">
+        <div><b>Γ</b><span>fonction Gamma</span></div>
+        <div><b>ζ</b><span>fonction zêta</span></div>
+        <div><b>η</b><span>fonction eta</span></div>
+        <div><b>∂ / d</b><span>dérivées</span></div>
+        <div><b>∫</b><span>intégrales</span></div>
+        <div><b>π</b><span>constante</span></div>
+      </div>
+      <button id="toggle">⏸ Mettre en pause</button>
+    </aside>
+  </section>
+</main>
+<script>
+const ticks=document.getElementById("ticks"), labels=document.getElementById("labels");
+for(let i=0;i<60;i++){
+  const t=document.createElement("div"); t.className="tick"+(i%5===0?" major":"");
+  t.style.setProperty("--i",i); ticks.appendChild(t);
+}
+const expressionSets = [
+  {
+    1:"∫₀¹ 1 dx",
+    2:"∫₀¹ 2 dx",
+    3:"18ζ(2)/π²",
+    4:"[d x⁴/dx]₁",
+    5:"Γ(6)/Γ(5)",
+    6:"∫₀¹ 6 dx",
+    7:"Γ(8)/Γ(7)",
+    8:"[d x⁸/dx]₁",
+    9:"108η(2)/π²",
+    10:"60ζ(2)/π²",
+    11:"Γ(12)/Γ(11)",
+    12:"[d x¹²/dx]₁"
+  },
+  {
+    1:"limₓ→₀ sin(x)/x",
+    2:"∫₀¹ 2 dx",
+    3:"Γ(4)/Γ(3)",
+    4:"∫₀¹ 4 dx",
+    5:"30ζ(2)/π²",
+    6:"Γ(7)/Γ(6)",
+    7:"∫₀¹ 7 dx",
+    8:"Γ(9)/Γ(8)",
+    9:"108η(2)/π²",
+    10:"∫₀¹ 10 dx",
+    11:"66ζ(2)/π²",
+    12:"Γ(13)/Γ(12)"
+  },
+  {
+    1:"12η(2)/π²",
+    2:"[d x²/dx]₁",
+    3:"∫₀¹ 3 dx",
+    4:"Γ(5)/Γ(4)",
+    5:"30ζ(2)/π²",
+    6:"[d x⁶/dx]₁",
+    7:"∫₀¹ 7 dx",
+    8:"Γ(9)/Γ(8)",
+    9:"108η(2)/π²",
+    10:"[d x¹⁰/dx]₁",
+    11:"Γ(12)/Γ(11)",
+    12:"∫₀¹ 12 dx"
+  }
+];
+
+let expressionSetIndex = 0;
+let expressions = expressionSets[expressionSetIndex];
+
+for(let n=1;n<=12;n++){
+  const e=document.createElement("div");
+  e.className="label";
+  e.textContent=expressions[n];
+
+  // Position géométrique : 12 en haut, puis sens horaire.
+  const angle = (n % 12) * Math.PI / 6;
+  const radius = 40.0;
+  const verticalOffset = 1.4;
+
+  e.style.left = `${50 + radius * Math.sin(angle)}%`;
+  e.style.top  = `${50 - radius * Math.cos(angle) + verticalOffset}%`;
+
+  labels.appendChild(e);
+}
+
+function rotateFormulaSet() {
+  expressionSetIndex = (expressionSetIndex + 1) % expressionSets.length;
+  expressions = expressionSets[expressionSetIndex];
+
+  document.querySelectorAll(".label").forEach((e, index) => {
+    e.textContent = expressions[index + 1];
+  });
+}
+
+// Les formules changent toutes les 5 minutes, indépendamment des aiguilles.
+setInterval(rotateFormulaSet, 300000);
+
+let running=true, raf;
+
+function update(){
+  const d=new Date();
+  const s=d.getSeconds()+d.getMilliseconds()/1000;
+  const m=d.getMinutes()+s/60;
+  const h=(d.getHours()%12)+m/60;
+
+  document.getElementById("second").style.transform=`translateX(-50%) rotate(${s*6}deg)`;
+  document.getElementById("minute").style.transform=`translateX(-50%) rotate(${m*6}deg)`;
+  document.getElementById("hour").style.transform=`translateX(-50%) rotate(${h*30}deg)`;
+
+  document.getElementById("digital").textContent =
+    d.toLocaleTimeString("fr-FR",{hour12:false});
+
+  if(running) raf=requestAnimationFrame(update);
+}
+
+document.getElementById("toggle").onclick=()=>{
+  running=!running;
+  document.getElementById("toggle").textContent=running?"⏸ Mettre en pause":"▶ Reprendre";
+  if(running) update();
+};
+
+update();
+</script>
+</body>
+</html>
