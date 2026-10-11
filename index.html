@@ -160,9 +160,10 @@ for(let n=1;n<=12;n++){
   const angle = (n % 12) * Math.PI / 6;
   const radius = 40 - 8 * Math.abs(Math.sin(angle));
   const verticalOffset = 1.4 * Math.cos(angle);
+  const nudge = {2:-1.5, 4:1.5, 8:1.5, 10:-1.5};
 
   e.style.left = `${50 + radius * Math.sin(angle)}%`;
-  e.style.top  = `${50 - radius * Math.cos(angle) + verticalOffset}%`;
+  e.style.top  = `${50 - radius * Math.cos(angle) + verticalOffset + (nudge[n]||0)}%`;
 
   labels.appendChild(e);
 }
